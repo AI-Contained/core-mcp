@@ -32,4 +32,4 @@ myplugin = "my_package:register"
 
 3. Install it - `load_plugins` will discover it automatically.
 
-See [plugin-helloworld](https://github.com/AI-Contained/plugin-helloworld) for a reference implementation.
+See [ai-contained-provider-template](https://github.com/AI-Contained/ai-contained-provider-template) for a reference implementation.
