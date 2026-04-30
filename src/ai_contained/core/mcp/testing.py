@@ -4,7 +4,8 @@ from typing import Any, Callable, Literal, Self
 
 from fastmcp.client.client import CallToolResult
 from fastmcp.client.elicitation import ElicitRequestParams, ElicitResult
-from mcp import ClientSession
+from mcp.client.session import ClientSession
+from mcp.types import TextContent
 from mcp.shared.context import RequestContext
 
 ElicitAction = Literal["accept", "decline", "cancel"]
@@ -146,4 +147,6 @@ class WrapCallToolResult(CallToolResult):
             json.JSONDecodeError: If the content is not valid JSON.
             IndexError: If the content list is empty.
         """
-        return json.loads(self.content[0].text)
+        text_content = self.content[0]
+        assert isinstance(text_content, TextContent)
+        return json.loads(text_content.text)

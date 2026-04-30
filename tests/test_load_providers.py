@@ -1,9 +1,9 @@
 import importlib.metadata
 import pytest
-from assertpy import assert_that
+from assertpy import assert_that  # type: ignore[import-untyped]
 
 from ai_contained.core.mcp import load_providers
-from conftest import make_ep
+from conftest import make_ep  # type: ignore[import-not-found]
 
 
 def patch_entry_points(monkeypatch, *entry_points):

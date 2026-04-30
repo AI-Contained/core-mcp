@@ -27,7 +27,7 @@ def load_providers(mcp: FastMCP) -> FastMCP:
     denied = _parse_env_list("DENIED_PROVIDERS")
     for entry_point in importlib.metadata.entry_points(group="ai_contained.provider"):
         name = entry_point.name
-        version = f"v{entry_point.dist.version}"
+        version = f"v{entry_point.dist.version}" if entry_point.dist is not None else "v?"
         if not _is_allowed(name, allowed, denied):
             logger.info(f"⏭️  Skipped AI-Contained provider: {name} {version}")
             continue

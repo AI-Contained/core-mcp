@@ -26,5 +26,9 @@ markers = [
     "focus: run only focused tests (use with -m focus)",
 ]
 
+[tool.mypy]
+mypy_path = "src"
+explicit_package_bases = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_contained"]

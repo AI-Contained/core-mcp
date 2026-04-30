@@ -1,8 +1,8 @@
 import json
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 
 import pytest
-from assertpy import assert_that
+from assertpy import assert_that  # type: ignore[import-untyped]
 from fastmcp import Context, FastMCP
 from fastmcp.client import Client
 from fastmcp.client.client import CallToolResult
@@ -23,7 +23,7 @@ def make_result(text: str) -> CallToolResult:
 def describe_elicitor():
 
     @pytest.fixture
-    def elicitor() -> Elicitor:
+    def elicitor() -> Generator[Elicitor, None, None]:
         e = Elicitor()
         yield e
         assert_that(e._queue).is_empty()
