@@ -49,7 +49,7 @@ class Elicitor:
         """
         def step(msg: str, rtype: type | None, params: ElicitRequestParams, ctx: RequestContext[ClientSession, Any]) -> ElicitResponse:
             if expect_message is not None and msg != expect_message:
-                raise AssertionError(f"elicitation message mismatch\n  expected: {expect_message!r}\n  got:      {msg!r}")
+                assert msg == expect_message, f"elicitation message mismatch\n  expected: {expect_message!r}\n  got:      {msg!r}"
             return (action, content)
         return step
 
@@ -124,7 +124,6 @@ class Elicitor:
             AssertionError: If no steps are queued (unexpected elicitation).
             AssertionError: If the queued step has an expect_message that does not match.
         """
-        assert self._queue, f"Unexpected elicitation: {message!r}"
         action, content = self._queue.pop(0)(message, response_type, params, context)
         return ElicitResult(action=action, content=content)
 

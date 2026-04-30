@@ -1,8 +1,12 @@
 import json
+from collections.abc import AsyncGenerator
 
 import pytest
 from assertpy import assert_that
+from fastmcp import Context, FastMCP
+from fastmcp.client import Client
 from fastmcp.client.client import CallToolResult
+from fastmcp.exceptions import ToolError
 from mcp.types import TextContent
 
 from ai_contained.core.mcp.testing import Elicitor, WrapCallToolResult
@@ -18,68 +22,83 @@ def make_result(text: str) -> CallToolResult:
 
 def describe_elicitor():
 
-    @pytest.mark.parametrize("method", ["accept", "decline", "cancel"])
-    async def it_returns_the_correct_action_and_none_content(method):
+    @pytest.fixture
+    def elicitor() -> Elicitor:
         e = Elicitor()
-        getattr(e, method)()
-        result = await e("msg", None, None, None)
-        assert_that(result.action).is_equal_to(method)
-        assert_that(result.content).is_none()
+        yield e
+        assert_that(e._queue).is_empty()
 
-    @pytest.mark.parametrize("method", ["accept", "decline", "cancel"])
-    async def it_raises_on_message_mismatch(method):
-        e = Elicitor()
-        getattr(e, method)(expect_message="expected")
-        with pytest.raises(AssertionError) as exc_info:
-            await e("actual", None, None, None)
-        assert_that(str(exc_info.value)).contains("expected").contains("actual")
+    @pytest.fixture
+    async def client(elicitor: Elicitor) -> AsyncGenerator[Client, None]:
+        server = FastMCP("test")
+
+        @server.tool()
+        async def ask(message: str, ctx: Context) -> str:
+            result = await ctx.elicit(message=message, response_type=None)
+            if result.action != "accept":
+                raise ToolError("cancelled")
+            return "ok"
+
+        async with Client(transport=server, elicitation_handler=elicitor) as c:
+            yield c
 
     def describe_accept():
-        async def it_returns_provided_value():
-            e = Elicitor()
-            e.accept({"key": "value"})
-            result = await e("msg", None, None, None)
-            assert_that(result.content).is_equal_to({"key": "value"})
+        async def it_succeeds(client, elicitor):
+            elicitor.accept()
+            result = await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
+            assert_that(result.is_error).is_false()
 
-        async def it_passes_when_message_matches():
-            e = Elicitor()
-            e.accept(expect_message="expected")
-            result = await e("expected", None, None, None)
-            assert_that(result.action).is_equal_to("accept")
+        async def it_passes_when_message_matches(client, elicitor):
+            expected = "hello"
+            elicitor.accept(expect_message=expected)
+            result = await client.call_tool("ask", {"message": expected}, raise_on_error=False)
+            assert_that(result.is_error).is_false()
+
+    @pytest.mark.parametrize("method", ["decline", "cancel"])
+    async def it_returns_error_on_non_accept(client, elicitor, method):
+        getattr(elicitor, method)()
+        result = await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
+        assert_that(result.is_error).is_true()
+
+    @pytest.mark.parametrize("method", ["accept", "decline", "cancel"])
+    async def it_raises_on_message_mismatch(client, elicitor, method):
+        expected_elicitation = "hello"
+        received_elicitation = "goodbye"
+        getattr(elicitor, method)(expect_message=expected_elicitation)
+        with pytest.raises(ToolError) as exc_info:
+            await client.call_tool("ask", {"message": received_elicitation})
+        assert_that(str(exc_info.value)).contains(expected_elicitation).contains(received_elicitation)
 
     def describe_queue_behaviour():
-        async def it_raises_on_unexpected_elicitation():
-            e = Elicitor()
-            with pytest.raises(AssertionError) as exc_info:
-                await e("surprise", None, None, None)
-            assert_that(str(exc_info.value)).contains("surprise")
+        async def it_raises_on_unexpected_elicitation(client):
+            with pytest.raises(ToolError) as exc_info:
+                await client.call_tool("ask", {"message": "hello"})
+            assert_that(str(exc_info.value)).contains("pop from empty list")
 
-        async def it_consumes_steps_in_fifo_order():
-            e = Elicitor()
-            e.accept().decline().cancel()
-            r1 = await e("msg", None, None, None)
-            r2 = await e("msg", None, None, None)
-            r3 = await e("msg", None, None, None)
-            assert_that(r1.action).is_equal_to("accept")
-            assert_that(r2.action).is_equal_to("decline")
-            assert_that(r3.action).is_equal_to("cancel")
+        async def it_consumes_steps_in_fifo_order(client, elicitor):
+            elicitor.accept().decline().accept()
+            result1 = await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
+            result2 = await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
+            result3 = await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
+            assert_that(result1.is_error).is_false()
+            assert_that(result2.is_error).is_true()
+            assert_that(result3.is_error).is_false()
 
-        async def it_raises_after_all_steps_consumed():
-            e = Elicitor()
-            e.accept()
-            await e("msg", None, None, None)
-            with pytest.raises(AssertionError):
-                await e("msg", None, None, None)
+        async def it_raises_after_all_steps_consumed(client, elicitor):
+            elicitor.accept()
+            await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
+            with pytest.raises(ToolError) as exc_info:
+                await client.call_tool("ask", {"message": "hello"})
+            assert_that(str(exc_info.value)).contains("pop from empty list")
 
     def describe_on_elicit():
-        async def it_accepts_a_custom_callback():
-            e = Elicitor()
-            e.on_elicit(lambda msg, rtype, params, ctx: ("accept", "custom"))
-            result = await e("msg", None, None, None)
-            assert_that(result.action).is_equal_to("accept")
-            assert_that(result.content).is_equal_to("custom")
+        async def it_accepts_a_custom_callback(client, elicitor):
+            elicitor.on_elicit(lambda msg, rtype, params, ctx: ("accept", None))
+            result = await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
+            assert_that(result.is_error).is_false()
 
         def it_returns_self_for_chaining():
+            # Inline — no MCP call, queue intentionally left with unconsumed step
             e = Elicitor()
             assert_that(e.on_elicit(lambda *_: ("accept", None))).is_same_as(e)
 
