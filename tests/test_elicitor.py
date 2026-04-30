@@ -70,7 +70,7 @@ def describe_elicitor():
         assert_that(str(exc_info.value)).contains(expected_elicitation).contains(received_elicitation)
 
     def describe_queue_behaviour():
-        async def it_raises_on_unexpected_elicitation(client):
+        async def it_raises_when_queue_is_empty(client):
             with pytest.raises(ToolError) as exc_info:
                 await client.call_tool("ask", {"message": "hello"})
             assert_that(str(exc_info.value)).contains("pop from empty list")
@@ -84,7 +84,7 @@ def describe_elicitor():
             assert_that(result2.is_error).is_true()
             assert_that(result3.is_error).is_false()
 
-        async def it_raises_after_all_steps_consumed(client, elicitor):
+        async def it_raises_when_queue_is_exhausted(client, elicitor):
             elicitor.accept()
             await client.call_tool("ask", {"message": "hello"}, raise_on_error=False)
             with pytest.raises(ToolError) as exc_info:
