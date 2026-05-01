@@ -75,6 +75,9 @@ def describe_load_providers():
             result = load_providers(mcp)
 
             assert_that(result).is_same_as(mcp)
+            assert_that(tools.filesystem.times_called()).is_equal_to(1)
+            assert_that(tools.shell.times_called()).is_equal_to(1)
+            assert_that(tools.git.times_called()).is_equal_to(1)
 
     def describe_ALLOWED_PROVIDERS():
         def it_loads_only_the_allowed_provider(mcp, provider, tools):
@@ -110,6 +113,8 @@ def describe_load_providers():
             load_providers(mcp)
 
             assert_that(tools.filesystem.times_called()).is_equal_to(0)
+            assert_that(tools.shell.times_called()).is_equal_to(0)
+            assert_that(tools.git.times_called()).is_equal_to(0)
 
         def it_does_not_load_when_name_has_surrounding_whitespace(mcp, provider, tools):
             provider.setenv("ALLOWED_PROVIDERS", f" {tools.filesystem.name} ")
@@ -117,6 +122,8 @@ def describe_load_providers():
             load_providers(mcp)
 
             assert_that(tools.filesystem.times_called()).is_equal_to(0)
+            assert_that(tools.shell.times_called()).is_equal_to(0)
+            assert_that(tools.git.times_called()).is_equal_to(0)
 
         def it_treats_comma_only_value_as_unset(mcp, provider, tools):
             provider.setenv("ALLOWED_PROVIDERS", ",")
@@ -164,6 +171,7 @@ def describe_load_providers():
 
             assert_that(tools.filesystem.times_called()).is_equal_to(1)
             assert_that(tools.shell.times_called()).is_equal_to(0)
+            assert_that(tools.git.times_called()).is_equal_to(0)
 
     def describe_error_handling():
         def it_raises_and_halts_when_register_fails(mcp, provider):
