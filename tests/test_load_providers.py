@@ -104,7 +104,9 @@ def describe_load_providers() -> None:
             assert_that(providers.shell.times_called()).is_equal_to(1)
             assert_that(providers.git.times_called()).is_equal_to(0)
 
-        def it_loads_nothing_when_no_providers_match(mcp: FastMCP, context: MockContext, providers: ProviderSet) -> None:
+        def it_loads_nothing_when_no_providers_match(
+            mcp: FastMCP, context: MockContext, providers: ProviderSet
+        ) -> None:
             context.setenv("ALLOWED_PROVIDERS", "non-existent")
 
             load_providers(mcp)
@@ -122,7 +124,9 @@ def describe_load_providers() -> None:
             assert_that(providers.shell.times_called()).is_equal_to(0)
             assert_that(providers.git.times_called()).is_equal_to(0)
 
-        def it_does_not_load_when_name_has_surrounding_whitespace(mcp: FastMCP, context: MockContext, providers: ProviderSet) -> None:
+        def it_does_not_load_when_name_has_surrounding_whitespace(
+            mcp: FastMCP, context: MockContext, providers: ProviderSet
+        ) -> None:
             context.setenv("ALLOWED_PROVIDERS", f" {providers.filesystem.name} ")
 
             load_providers(mcp)
@@ -159,7 +163,9 @@ def describe_load_providers() -> None:
             assert_that(providers.shell.times_called()).is_equal_to(0)
             assert_that(providers.git.times_called()).is_equal_to(0)
 
-        def it_loads_all_when_no_providers_match_deny_list(mcp: FastMCP, context: MockContext, providers: ProviderSet) -> None:
+        def it_loads_all_when_no_providers_match_deny_list(
+            mcp: FastMCP, context: MockContext, providers: ProviderSet
+        ) -> None:
             context.setenv("DENIED_PROVIDERS", "non-existent")
 
             load_providers(mcp)

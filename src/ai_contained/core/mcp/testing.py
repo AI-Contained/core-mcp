@@ -1,12 +1,15 @@
+"""Testing utilities for ai-contained MCP providers."""
+
 import json
 from dataclasses import dataclass
 from typing import Any, Callable, Literal, Self
 
 from fastmcp.client.client import CallToolResult
 from fastmcp.client.elicitation import ElicitRequestParams, ElicitResult
+
 from mcp.client.session import ClientSession
-from mcp.types import TextContent
 from mcp.shared.context import RequestContext
+from mcp.types import TextContent
 
 ElicitAction = Literal["accept", "decline", "cancel"]
 ElicitContent = dict[str, Any] | str | int | float | bool | None
@@ -34,6 +37,7 @@ class Elicitor:
     """
 
     def __init__(self) -> None:
+        """Initialize with an empty elicitation queue."""
         self._queue: list[ElicitCallback] = []
 
     def _make_step(self, action: ElicitAction, content: ElicitContent, expect_message: str | None) -> ElicitCallback:
@@ -47,11 +51,18 @@ class Elicitor:
 
         Returns:
             An ElicitCallback suitable for passing to on_elicit().
+
         """
-        def step(msg: str, rtype: type | None, params: ElicitRequestParams, ctx: RequestContext[ClientSession, Any]) -> ElicitResponse:
+
+        def step(
+            msg: str, rtype: type | None, params: ElicitRequestParams, ctx: RequestContext[ClientSession, Any]
+        ) -> ElicitResponse:
             if expect_message is not None and msg != expect_message:
-                assert msg == expect_message, f"elicitation message mismatch\n  expected: {expect_message!r}\n  got:      {msg!r}"
+                assert msg == expect_message, (
+                    f"elicitation message mismatch\n  expected: {expect_message!r}\n  got:      {msg!r}"
+                )
             return (action, content)
+
         return step
 
     def on_elicit(self, fn: ElicitCallback) -> Self:
@@ -64,6 +75,7 @@ class Elicitor:
 
         Returns:
             Self, to allow fluent chaining.
+
         """
         self._queue.append(fn)
         return self
@@ -78,6 +90,7 @@ class Elicitor:
 
         Returns:
             Self, to allow fluent chaining.
+
         """
         return self.on_elicit(self._make_step("accept", value, expect_message))
 
@@ -90,6 +103,7 @@ class Elicitor:
 
         Returns:
             Self, to allow fluent chaining.
+
         """
         return self.on_elicit(self._make_step("decline", None, expect_message))
 
@@ -102,10 +116,17 @@ class Elicitor:
 
         Returns:
             Self, to allow fluent chaining.
+
         """
         return self.on_elicit(self._make_step("cancel", None, expect_message))
 
-    async def __call__(self, message: str, response_type: type | None, params: ElicitRequestParams, context: RequestContext[ClientSession, Any]) -> ElicitResult:
+    async def __call__(
+        self,
+        message: str,
+        response_type: type | None,
+        params: ElicitRequestParams,
+        context: RequestContext[ClientSession, Any],
+    ) -> ElicitResult:
         """Handle an incoming elicitation from the MCP server.
 
         Consumes the next queued step and returns its response. Raises AssertionError
@@ -124,6 +145,7 @@ class Elicitor:
         Raises:
             AssertionError: If no steps are queued (unexpected elicitation).
             AssertionError: If the queued step has an expect_message that does not match.
+
         """
         action, content = self._queue.pop(0)(message, response_type, params, context)
         return ElicitResult(action=action, content=content)
@@ -146,6 +168,7 @@ class WrapCallToolResult(CallToolResult):
         Raises:
             json.JSONDecodeError: If the content is not valid JSON.
             IndexError: If the content list is empty.
+
         """
         text_content = self.content[0]
         assert isinstance(text_content, TextContent)

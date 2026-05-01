@@ -98,7 +98,7 @@ def describe_elicitor() -> None:
 
 def describe_wrap_call_tool_result() -> None:
 
-    def make_result(text: str) -> CallToolResult:
+    def _make_result(text: str) -> CallToolResult:
         return CallToolResult(
             content=[TextContent(type="text", text=text)],
             structured_content=None,
@@ -106,17 +106,17 @@ def describe_wrap_call_tool_result() -> None:
         )
 
     def it_deserializes_json_content() -> None:
-        wrapped = WrapCallToolResult(**vars(make_result('{"exit_status": "0"}')))
+        wrapped = WrapCallToolResult(**vars(_make_result('{"exit_status": "0"}')))
         assert_that(wrapped.json()).is_equal_to({"exit_status": "0"})
 
     def it_preserves_base_class_attributes() -> None:
-        wrapped = WrapCallToolResult(**vars(make_result('{"k": "v"}')))
+        wrapped = WrapCallToolResult(**vars(_make_result('{"k": "v"}')))
         assert_that(wrapped.is_error).is_false()
         text_content = wrapped.content[0]
         assert isinstance(text_content, TextContent)
         assert_that(text_content.text).is_equal_to('{"k": "v"}')
 
     def it_raises_on_invalid_json() -> None:
-        wrapped = WrapCallToolResult(**vars(make_result("not json")))
+        wrapped = WrapCallToolResult(**vars(_make_result("not json")))
         with pytest.raises(json.JSONDecodeError):
             wrapped.json()

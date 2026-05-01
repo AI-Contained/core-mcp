@@ -1,6 +1,8 @@
 """AI-Contained provider loader for FastMCP."""
+
 import importlib.metadata
 import os
+
 from fastmcp import FastMCP
 from fastmcp.utilities.logging import get_logger
 
