@@ -29,6 +29,7 @@ markers = [
 [tool.mypy]
 mypy_path = "src"
 explicit_package_bases = true
+strict = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_contained"]
