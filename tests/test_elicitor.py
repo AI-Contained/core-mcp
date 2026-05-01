@@ -13,14 +13,6 @@ from mcp.types import TextContent
 from ai_contained.core.mcp.testing import Elicitor, WrapCallToolResult
 
 
-def make_result(text: str) -> CallToolResult:
-    return CallToolResult(
-        content=[TextContent(type="text", text=text)],
-        structured_content=None,
-        meta=None,
-    )
-
-
 def describe_elicitor() -> None:
 
     @pytest.fixture
@@ -105,6 +97,13 @@ def describe_elicitor() -> None:
 
 
 def describe_wrap_call_tool_result() -> None:
+
+    def make_result(text: str) -> CallToolResult:
+        return CallToolResult(
+            content=[TextContent(type="text", text=text)],
+            structured_content=None,
+            meta=None,
+        )
 
     def it_deserializes_json_content() -> None:
         wrapped = WrapCallToolResult(**vars(make_result('{"exit_status": "0"}')))
