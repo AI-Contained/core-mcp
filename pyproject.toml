@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-contained-core-mcp"
-version = "0.0.2"
+version = "0.1.0"
 description = "Base MCP server with plugin auto-discovery for AI-Contained"
 requires-python = ">=3.12"
 dependencies = [
@@ -17,7 +17,21 @@ dev = [
     "pytest-asyncio>=1.0",
     "pytest-describe>=3.1",
     "assertpy>=1.1",
+    "ruff>=0.15.12",
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "D"]
+ignore = ["D203", "D213"]  # conflict with D211/D212
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]  # no docstrings required in tests
+
+[tool.ruff.format]
+quote-style = "double"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -25,6 +39,11 @@ testpaths = ["tests"]
 markers = [
     "focus: run only focused tests (use with -m focus)",
 ]
+
+[tool.mypy]
+mypy_path = "src"
+explicit_package_bases = true
+strict = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_contained"]
