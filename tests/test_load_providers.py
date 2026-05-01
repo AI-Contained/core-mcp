@@ -17,10 +17,10 @@ class MockProvider:
         def register(mcp):
             self._calls.append(mcp)
 
-        ep = MagicMock()
-        ep.name = name
-        ep.load.return_value = register
-        self._ep = ep
+        entry_point = MagicMock()
+        entry_point.name = name
+        entry_point.load.return_value = register
+        self._entry_point = entry_point
 
     def times_called(self):
         return len(self._calls)
@@ -34,7 +34,7 @@ class MockContext:
         self._mp.setattr(
             importlib.metadata,
             "entry_points",
-            lambda group=None: [p._ep for p in providers],
+            lambda group=None: [provider._entry_point for provider in providers],
         )
 
     def setenv(self, key, value):
@@ -179,7 +179,7 @@ def describe_load_providers():
                 raise RuntimeError("register failed")
 
             bad = MockProvider("bad")
-            bad._ep.load.return_value = fail
+            bad._entry_point.load.return_value = fail
             good = MockProvider("good")
             context.set_providers(bad, good)
 
