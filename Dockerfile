@@ -5,7 +5,7 @@ RUN apk add --no-cache uv
 
 COPY . /opt/_ai-contained-base
 
-RUN uv pip install --system --break-system-packages /opt/_ai-contained-base/
+RUN uv pip install --system --break-system-packages /opt/_ai-contained-base/packages/base/
 
 ENV ADDRESS=0.0.0.0
 ENV PORT=8080

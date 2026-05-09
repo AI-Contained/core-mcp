@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Base Docker image with MCP server and provider finalization for AI-Contained"
 requires-python = ">=3.12"
 dependencies = [
-    "ai-contained-core-mcp",
+    "ai-contained-core-mcp @ ../core-mcp",
     "fastmcp==3.2.4",
     "starlette",
 ]
