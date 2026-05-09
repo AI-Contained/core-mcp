@@ -1,8 +1,50 @@
-# core-mcp
+# ai-contained-base
 
-The base provider loader for [AI-Contained](https://github.com/AI-Contained) MCP servers. Provides auto-discovery of installed providers via Python entry points.
+The base Docker image and Python library for [AI-Contained](https://github.com/AI-Contained) MCP servers.
 
-## Usage
+This repo contains two packages:
+
+| Package | Description |
+|---|---|
+| `ai-contained-core-mcp` | Provider auto-discovery via Python entry points |
+| `ai-contained-base` | MCP HTTP server + provider finalization scripts |
+
+## Docker image
+
+```bash
+docker pull ghcr.io/ai-contained/ai-contained-base:latest
+```
+
+The image exposes an MCP server over HTTP. Providers are installed by assembling a final image on top of the base:
+
+```dockerfile
+FROM ghcr.io/ai-contained/ai-contained-base:latest
+
+COPY --link --from=ghcr.io/ai-contained/ai-contained-provider-shell:latest / /
+
+RUN ai-contained-finalize
+
+USER 65533:65533
+```
+
+`ai-contained-finalize` installs all provider packages found under `/opt/ai-contained-*/` into the system Python.
+
+## Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `ADDRESS` | `0.0.0.0` | Address the MCP server binds to |
+| `PORT` | `8080` | Port the MCP server listens on |
+| `ALLOWED_PROVIDERS` | _(all)_ | Comma-separated list of provider names to load |
+| `DENIED_PROVIDERS` | _(none)_ | Comma-separated list of provider names to skip |
+
+`ALLOWED_PROVIDERS` and `DENIED_PROVIDERS` are case-sensitive and match the entry point name exactly. `DENIED_PROVIDERS` takes precedence.
+
+## Packages
+
+### `ai-contained-core-mcp`
+
+Provides `load_providers` — auto-discovers all packages registered under the `ai_contained.provider` entry point group:
 
 ```python
 from fastmcp import FastMCP
@@ -12,51 +54,25 @@ mcp = FastMCP("my-server")
 load_providers(mcp)
 ```
 
-`load_providers` discovers all packages registered under the `ai_contained.provider` entry point group and loads them into the provided `FastMCP` instance.
+Also provides `ai_contained.core.mcp.testing` with test utilities (`Elicitor`, `WrapCallToolResult`) for use in provider test suites.
 
-## Filtering Providers
+### `ai-contained-base`
 
-Two environment variables control which providers are loaded:
+Provides two console scripts:
 
-| Variable | Description |
-|---|---|
-| `ALLOWED_PROVIDERS` | Comma-separated list of provider names to load. All others are skipped. If unset, all providers are loaded. |
-| `DENIED_PROVIDERS` | Comma-separated list of provider names to skip. Takes precedence over `ALLOWED_PROVIDERS`. |
-
-**Load only the `filesystem` provider:**
-```bash
-ALLOWED_PROVIDERS=filesystem
-```
-
-**Load all providers except `shell`:**
-```bash
-DENIED_PROVIDERS=shell
-```
-
-**Load `filesystem` and `git`, but not `shell`:**
-```bash
-ALLOWED_PROVIDERS=filesystem,git
-DENIED_PROVIDERS=shell
-```
-
-Provider names are case-sensitive and must match the entry point name exactly.
-
-## Installation
-
-```bash
-pip install "ai-contained-core-mcp @ https://github.com/AI-Contained/core-mcp/archive/refs/tags/v0.0.2.zip"
-```
+- **`ai-contained-server`** — starts the MCP HTTP server
+- **`ai-contained-finalize`** — installs providers at image build time
 
 ## Creating a Provider
 
-1. Create a package with a `register(mcp)` function
-2. Register it in `pyproject.toml`:
+1. Create a package with a `register(mcp: FastMCP) -> None` function
+2. Declare the entry point in `pyproject.toml`:
 
 ```toml
 [project.entry-points."ai_contained.provider"]
 myprovider = "my_package:register"
 ```
 
-3. Install it - `load_providers` will discover it automatically.
+3. Ship it as a Docker image following the provider convention — `ai-contained-finalize` will discover and install it automatically.
 
 See [ai-contained-provider-template](https://github.com/AI-Contained/ai-contained-provider-template) for a reference implementation.
